@@ -1,0 +1,110 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0d"><link rel="manifest" href="manifest.json"><title>Daily Companion</title>
+<style>
+:root{--bg:#0b0b0d;--card:#17171a;--soft:#222226;--line:#2c2c30;--text:#f5f5f7;--muted:#98989f;--blue:#0a84ff;--green:#30d158}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100vh}
+header,main{max-width:680px;margin:auto}header{padding:38px 18px 10px}h1{font-size:32px;letter-spacing:-1px;margin:0}header p{margin:6px 0;color:var(--muted)}
+main{padding:0 14px 105px}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0}h2{font-size:20px;margin:0 0 14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}.muted{color:var(--muted);font-size:14px}.big{font-size:28px;font-weight:750}
+input,textarea,select,button{font:inherit}input[type=number],textarea,select{width:100%;border:1px solid var(--line);background:var(--soft);color:var(--text);border-radius:14px;padding:13px;outline:none}
+button{border:0;border-radius:14px;padding:12px 14px;font-weight:650;cursor:pointer}.primary{background:var(--blue);color:white;width:100%}.ghost{background:var(--soft);color:var(--text)}button:disabled{opacity:.38}
+.check{display:flex;align-items:center;gap:11px;background:var(--soft);padding:13px;border-radius:14px;margin-bottom:14px}.check input{width:21px;height:21px;accent-color:var(--blue)}
+.photo{background:var(--soft);border-radius:16px;padding:13px;margin:9px 0}.photohead{display:flex;justify-content:space-between;align-items:center}.photohead label{font-size:13px;color:var(--muted)}.photohead input{accent-color:var(--blue)}
+.file{display:block;width:100%;margin-top:10px;color:var(--muted)}.preview{width:100%;max-height:260px;object-fit:cover;border-radius:13px;margin-top:10px}
+.progress{height:9px;background:var(--soft);border-radius:20px;overflow:hidden;margin:12px 0}.bar{height:100%;background:var(--blue);width:0;transition:.2s}
+.water{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.water button{background:var(--soft);color:var(--text)}.water button.on{background:#102b46;color:#62b0ff}
+.status{background:var(--soft);border-radius:14px;padding:13px;color:var(--muted);line-height:1.45}.status.ready{background:#12321c;color:#72e58e}
+.tabs{position:fixed;bottom:0;left:0;right:0;background:#111113ee;backdrop-filter:blur(18px);border-top:1px solid var(--line);display:flex;padding:7px 8px calc(7px + env(safe-area-inset-bottom));z-index:10}.tabs button{flex:1;background:none;color:#77777e}.tabs button.active{color:var(--blue)}
+.hidden{display:none}.entry{border-top:1px solid var(--line);padding:14px 0}.entry:first-child{border-top:0}.meal{background:var(--soft);border-radius:12px;padding:10px;margin-top:7px}.pill{display:inline-block;background:var(--soft);border-radius:999px;padding:5px 8px;margin:3px 3px 0 0;font-size:12px;color:#c7c7cc}
+</style></head><body>
+<header><h1>Daily Companion</h1><p id="dateLabel"></p></header><main>
+<section id="today">
+<div class="card"><div class="row"><h2>Morning</h2><span id="morningCount" class="muted"></span></div>
+<label class="check"><input id="pee" type="checkbox">Bathroom check complete</label>
+<div class="muted" style="margin:0 0 7px">Morning weight</div><input id="weight" type="number" step=".1" inputmode="decimal" placeholder="Enter weight in kg">
+</div>
+<div class="card"><h2>Photos</h2><p class="muted">For each slot, upload/take a photo or choose Skip.</p><div id="photoList"></div></div>
+<div class="card"><div class="row"><div><h2 style="margin-bottom:2px">Water</h2><span class="muted">Goal: 3 litres</span></div><div class="big"><span id="litres">0</span>L</div></div><div class="progress"><div id="bar" class="bar"></div></div><div id="waterButtons" class="water"></div></div>
+<div class="card"><div class="row"><h2>Tea</h2><span id="teaLogged" class="muted"></span></div><div id="teaStatus" class="status"></div><br><button id="teaBtn" class="primary" disabled>Show tea instructions</button><br><br><button id="teaLogBtn" class="ghost" style="width:100%" disabled>Log that I had my tea</button></div>
+<div class="card"><h2>Companion</h2><div id="summary" class="status">Tap below for today's check-in summary.</div><br><button id="summaryBtn" class="ghost">Update summary</button></div>
+</section>
+<section id="meals" class="hidden"><div class="card"><h2>Add meal</h2><select id="mealType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select><br><br><textarea id="mealText" placeholder="What did you eat?"></textarea><br><br><button id="addMeal" class="primary">Save meal</button></div><div class="card"><h2>Today's meals</h2><div id="mealList"></div></div></section>
+<section id="history" class="hidden">
+<div class="card"><div class="row"><h2>History</h2><span class="muted">Your saved check-ins</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+<button id="exportBtn" class="ghost">Download PDF</button>
+<button id="clearBtn" class="ghost" style="color:#ff453a">Clear history</button>
+</div>
+<div id="historyList"></div></div></section>
+</main><nav class="tabs"><button class="active" data-tab="today">Today</button><button data-tab="meals">Meals</button><button data-tab="history">History</button></nav>
+<script>
+const KEY="daily_companion_v3";
+let data;try{data=JSON.parse(localStorage.getItem(KEY)||'{"days":{},"meals":[]}')}catch(e){data={days:{},meals:[]}}
+data.days=data.days||{};data.meals=data.meals||[];
+const localDate=()=>{let d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`};
+const key=localDate();
+function current(){let x=data.days[key]||(data.days[key]={pee:false,weight:null,photos:[null,null,null],skips:[false,false,false],water:0});x.photos=x.photos||[null,null,null];x.skips=x.skips||[false,false,false];x.water=Math.min(6,Number(x.water)||0);x.teaTaken=!!x.teaTaken;return x}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){alert("Storage is full. Try removing older photos from browser data or export your records.")}}
+function compress(file,cb){let r=new FileReader();r.onload=()=>{let img=new Image();img.onload=()=>{let max=900,s=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.72))};img.src=r.result};r.readAsDataURL(file)}
+function renderPhotos(){let x=current();photoList.innerHTML=[0,1,2].map(i=>`<div class="photo"><div class="photohead"><b>Photo ${i+1}</b><label><input type="checkbox" data-skip="${i}" ${x.skips[i]?"checked":""}> Skip today</label></div>${x.skips[i]?"<p class='muted'>Skipped for today.</p>":`<input class="file" data-photo="${i}" type="file" accept="image/*">${x.photos[i]?`<img class="preview" src="${x.photos[i]}">`:""}`}</div>`).join("")}
+function render(){let x=current();dateLabel.textContent=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});pee.checked=!!x.pee;weight.value=x.weight??"";renderPhotos();let resolved=x.photos.filter((p,i)=>p||x.skips[i]).length;morningCount.textContent=`${Number(!!x.pee)+Number(!!x.weight)+resolved} / 5 complete`;litres.textContent=(x.water*.5).toFixed(x.water%2?1:0);bar.style.width=(x.water/6*100)+"%";waterButtons.innerHTML=[1,2,3,4,5,6].map(n=>`<button data-water="${n}" class="${n<=x.water?"on":""}">${n<=x.water?"✓":"+"}<br>500 ml</button>`).join("");let ok=!!x.pee&&!!x.weight&&resolved===3;teaBtn.disabled=!ok;teaLogBtn.disabled=!ok;teaLogged.textContent=x.teaTaken?"Had tea ✓":"";teaLogBtn.textContent=x.teaTaken?"Tea logged ✓":"Log that I had my tea";teaStatus.className="status"+(ok?" ready":"");teaStatus.textContent=x.teaTaken?"Tea logged for today.":ok?"Morning check-in complete. Tea instructions are unlocked.":`Complete bathroom + weight + all 3 photo slots (${resolved}/3 resolved).`;renderMeals();renderHistory()}
+function renderMeals(){let ms=data.meals.filter(m=>m.date===key);mealList.innerHTML=ms.length?ms.map(m=>`<div class="meal"><b>${safe(m.type)}</b><div>${safe(m.text)}</div></div>`).join(""):"<p class='muted'>No meals logged today.</p>"}
+function renderHistory(){let dates=[...new Set([...Object.keys(data.days),...data.meals.map(m=>m.date)])].sort().reverse();historyList.innerHTML=dates.length?dates.map(k=>{let x=data.days[k]||{},ms=data.meals.filter(m=>m.date===k);return `<div class="entry"><b>${k}</b><div><span class="pill">${x.weight??"—"} kg</span><span class="pill">${((x.water||0)*.5)} L water</span><span class="pill">${x.pee?"Bathroom ✓":"Bathroom —"}</span><span class="pill">${x.teaTaken?"Tea ✓":"Tea —"}</span></div><div style="margin-top:9px"><b>Meals</b>${ms.length?ms.map(m=>`<div class="meal"><b>${safe(m.type)}</b> · ${safe(m.text)}</div>`).join(""):"<div class='muted' style='margin-top:5px'>No meals logged.</div>"}</div></div>`}).join(""):"<p class='muted'>No history yet.</p>"}
+function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+pee.onchange=()=>{current().pee=pee.checked;save();render()};weight.onchange=()=>{current().weight=weight.value?Number(weight.value):null;save();render()};
+photoList.onchange=e=>{let si=e.target.dataset.skip;if(si!==undefined){let x=current();x.skips[si]=e.target.checked;if(x.skips[si])x.photos[si]=null;save();render();return}let pi=e.target.dataset.photo;if(pi!==undefined&&e.target.files[0])compress(e.target.files[0],img=>{let x=current();x.photos[pi]=img;x.skips[pi]=false;save();render()})};
+waterButtons.onclick=e=>{let b=e.target.closest("[data-water]");if(!b)return;let n=+b.dataset.water,x=current();x.water=x.water===n?n-1:n;save();render()};
+teaBtn.onclick=()=>teaStatus.innerHTML="<b>Tea instructions</b><br>Use <b>2 teaspoons</b>. Let it steep/draw for <b>2–5 minutes</b>.";teaLogBtn.onclick=()=>{let x=current();x.teaTaken=!x.teaTaken;save();render()};
+summaryBtn.onclick=()=>{let x=current(),ms=data.meals.filter(m=>m.date===key);summary.textContent=`Weight: ${x.weight??"not logged"}${x.weight?" kg":""}. Bathroom: ${x.pee?"done":"not done"}. Photos: ${x.photos.filter(Boolean).length} uploaded, ${x.skips.filter(Boolean).length} skipped. Water: ${x.water*.5}/3 L. Meals: ${ms.length}.`};
+addMeal.onclick=()=>{let t=mealText.value.trim();if(!t)return;data.meals.push({date:key,type:mealType.value,text:t});mealText.value="";save();render()};
+document.querySelector(".tabs").onclick=e=>{let b=e.target.closest("[data-tab]");if(!b)return;document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));document.getElementById(b.dataset.tab).classList.remove("hidden");document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");render()};
+
+function pdfEscape(s){return String(s??"").replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)").replace(/[^\x20-\x7E]/g,"")}
+function makePDF(){
+ let dates=[...new Set([...Object.keys(data.days),...data.meals.map(m=>m.date)])].sort().reverse();
+ let lines=[["Daily Companion",20],["Progress Summary",12],["Generated: "+new Date().toLocaleDateString(),10],["",8]];
+ if(!dates.length) lines.push(["No history recorded yet.",11]);
+ dates.forEach(k=>{
+   let x=data.days[k]||{}, ms=data.meals.filter(m=>m.date===k);
+   lines.push([k,15]);
+   lines.push([`Weight: ${x.weight??"—"} kg    Water: ${((x.water||0)*.5).toFixed(1)} / 3 L`,10]);
+   lines.push([`Bathroom: ${x.pee?"Complete":"Not logged"}    Tea: ${x.teaTaken?"Had tea":"Not logged"}`,10]);
+   let photos=(x.photos||[]).filter(Boolean).length, skips=(x.skips||[]).filter(Boolean).length;
+   lines.push([`Photos: ${photos} uploaded, ${skips} skipped`,10]);
+   lines.push(["Meals:",10]);
+   if(ms.length) ms.forEach(m=>lines.push([`  ${m.type}: ${m.text}`,9])); else lines.push(["  No meals logged.",9]);
+   lines.push(["",7]);
+ });
+ let pages=[], page=[], y=790;
+ lines.forEach(([t,size])=>{let h=Math.max(13,size+4);if(y-h<45){pages.push(page);page=[];y=790}page.push({t,size,y});y-=h});if(page.length||!pages.length)pages.push(page);
+ let objs=[], add=s=>{objs.push(s);return objs.length};
+ let font=add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+ let pageIds=[], contentIds=[];
+ pages.forEach(p=>{
+   let stream="BT\n";
+   p.forEach(o=>{stream+=`/F1 ${o.size} Tf 50 ${o.y} Td (${pdfEscape(o.t)}) Tj\n0 ${-o.y} Td\n`});
+   stream+="ET";
+   contentIds.push(add(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`));
+   pageIds.push(add("PENDING"));
+ });
+ let pagesId=add("PAGES_PENDING");
+ pageIds.forEach((id,i)=>objs[id-1]=`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contentIds[i]} 0 R >>`);
+ objs[pagesId-1]=`<< /Type /Pages /Kids [${pageIds.map(id=>id+" 0 R").join(" ")}] /Count ${pageIds.length} >>`;
+ let catalog=add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+ let out="%PDF-1.4\n", offsets=[0];
+ objs.forEach((o,i)=>{offsets.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+ let xref=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;
+ for(let i=1;i<=objs.length;i++)out+=String(offsets[i]).padStart(10,"0")+" 00000 n \n";
+ out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalog} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+ return new Blob([out],{type:"application/pdf"});
+}
+exportBtn.onclick=()=>{
+ let blob=makePDF(), filename=`Daily-Companion-${localDate()}.pdf`;
+ let url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download=filename;a.style.display="none";document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),3000);
+};
+clearBtn.onclick=()=>{if(confirm("Clear all Daily Companion history? This will permanently delete saved weights, water, photos, tea logs and meals from this browser. Export first if you want a backup.")){data={days:{},meals:[]};save();render();alert("History cleared.")}};
+render();
+</script></body></html>
